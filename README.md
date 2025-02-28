@@ -1,5 +1,7 @@
 # AmiyaHttp
 
+![PyPI](https://img.shields.io/pypi/v/amiyahttp)
+
 对 [FastAPI](https://fastapi.tiangolo.com/) 进行二次封装的简易 HTTP Web 服务 SDK
 
 ```python
@@ -22,5 +24,3 @@ class Bot:
 
 asyncio.run(server.serve())
 ```
-
-## [文档地址](https://www.amiyabot.com/develop/advanced/httpSupport.html)

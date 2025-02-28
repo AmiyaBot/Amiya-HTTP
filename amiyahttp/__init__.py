@@ -1,5 +1,5 @@
-from typing import Any
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,58 +10,61 @@ from starlette.staticfiles import StaticFiles
 
 from amiyahttp.utils import snake_case_to_pascal_case, create_dir
 from amiyahttp.serverBase import *
+from amiyahttp.oauth2 import *
 
 
 class HttpServer(ServerABCClass, metaclass=ServerMeta):
-    def __init__(
-        self,
-        host: str,
-        port: int,
-        title: str = 'Amiya HTTP',
-        description: str = '对 FastAPI 进行二次封装的简易 HTTP Web 服务 SDK',
-        api_prefix: str = '/api',
-        fastapi_options: Optional[dict] = None,
-        uvicorn_options: Optional[dict] = None,
-        logging_options: dict = default_logging_options,
-    ):
+    def __init__(self, host: str, port: int, config: ServerConfig = ServerConfig()):
         super().__init__()
 
-        self.app = FastAPI(title=title, description=description, **(fastapi_options or {}))
+        app = FastAPI(title=config.title, description=config.description, **(config.fastapi_options or {}))
 
+        self.app = app
         self.host = host
         self.port = port
-        self.api_prefix = api_prefix
-        self.uvicorn_options = uvicorn_options
-        self.logging_options = logging_options
+        self.config = config
 
         self.router = InferringRouter()
         self.controller = cbv(self.router)
 
         self.__routes = []
-        self.__allow_path = []
-        self.__static_folders = []
 
-        @self.app.middleware('http')
-        async def interceptor(request: Request, call_next: Callable):
-            path = request.scope['path']
+        @app.post(f'{config.api_prefix}/token')
+        async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+            if not self.config.get_user_password:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Cannot get user password')
 
-            if path not in self.__allow_path and path.startswith(api_prefix):
-                return Response('Unauthorized!', status_code=401)
+            user_password = await self.config.get_user_password(form_data.username)
+            if not user_password:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f'Cannot get user password by username: {form_data.username}',
+                )
 
-            return await call_next(request)
+            if not authenticate_user(form_data.password, user_password):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Incorrect username or password')
 
-        @self.app.on_event('shutdown')
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(data={'sub': form_data.username}, expires_delta=access_token_expires)
+            return self.response(
+                extend={
+                    'access_token': access_token,
+                    'token_type': 'bearer',
+                }
+            )
+
+        @app.on_event('shutdown')
         async def on_shutdown():
             HttpServer.shutdown_all(self)
 
-        @self.app.exception_handler(HTTPException)
+        @app.exception_handler(HTTPException)
         async def on_exception(request: Request, exc: HTTPException):
             return JSONResponse(
                 self.response(code=exc.status_code, message=exc.detail),
                 status_code=exc.status_code,
             )
 
-        @self.app.exception_handler(RequestValidationError)
+        @app.exception_handler(RequestValidationError)
         async def on_exception(request: Request, exc: RequestValidationError):
             messages = []
             for item in exc.errors():
@@ -72,27 +75,11 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
                 status_code=422,
             )
 
-    def set_allow_path(self, paths: list):
-        self.__allow_path += paths
+    @property
+    def routes(self):
+        return self.__routes
 
-    def __load_server(self, options: dict):
-        return uvicorn.Server(
-            config=uvicorn.Config(
-                self.app,
-                loop='asyncio',
-                log_config=self.logging_options,
-                **options,
-            )
-        )
-
-    def route(
-        self,
-        router_path: Optional[str] = None,
-        method: str = 'post',
-        is_api: bool = True,
-        allow_unauthorized: bool = False,
-        **kwargs,
-    ):
+    def route(self, router_path: Optional[str] = None, method: str = 'post', **kwargs):
         def decorator(fn):
             nonlocal router_path
 
@@ -100,20 +87,16 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
             c_name = snake_case_to_pascal_case(path[0][0].lower() + path[0][1:])
 
             if not router_path:
-                router_path = f'/{c_name}'
-                if is_api:
-                    router_path = self.api_prefix + router_path
+                router_path = f'{self.config.api_prefix}/{c_name}'
                 if len(path) > 1:
                     router_path += f'/{snake_case_to_pascal_case(path[1])}'
 
-            arguments = {'path': router_path, 'tags': [c_name.title()] if len(path) > 1 else ['Alone'], **kwargs}
+            arguments = {'path': router_path, 'tags': [c_name.title()] if len(path) > 1 else ['None'], **kwargs}
 
             router_builder = getattr(self.router, method)
             router = router_builder(**arguments)
 
             self.__routes.append(router_path)
-            if allow_unauthorized:
-                self.__allow_path.append(router_path)
 
             return router(fn)
 
@@ -122,7 +105,6 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
     def add_static_folder(self, path: str, directory: str, **kwargs):
         create_dir(directory)
         self.app.mount(path, StaticFiles(directory=directory, **kwargs), name=directory)
-        self.__static_folders.append('/' + directory)
 
     def set_index_html(self, directory: str, path: str = '/'):
         templates = Jinja2Templates(directory=directory)
@@ -130,19 +112,6 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
         @self.app.get(path)
         async def read_root(request: Request):
             return templates.TemplateResponse('index.html', {'request': request})
-
-    @staticmethod
-    def response(
-        result: Any = None,
-        code: int = 200,
-        message: str = 'ok',
-    ):
-        return {
-            'code': code,
-            'result': result,
-            'message': message,
-            'type': 'success' if code == 200 else 'error',
-        }
 
     async def serve(self):
         self.app.add_middleware(
@@ -154,12 +123,29 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
         )
         self.app.include_router(self.router)
 
-        self.server = self.__load_server(
-            options={
-                'host': self.host,
-                'port': self.port,
-                **(self.uvicorn_options or {}),
-            }
+        self.server = uvicorn.Server(
+            config=uvicorn.Config(
+                self.app,
+                host=self.host,
+                port=self.port,
+                loop='asyncio',
+                log_config=self.config.logging_options,
+                **(self.config.uvicorn_options or {}),
+            )
         )
 
         await super().serve()
+
+    @staticmethod
+    def response(
+        result: Any = None,
+        code: int = 200,
+        message: str = '',
+        extend: Optional[dict] = None,
+    ):
+        return {
+            'code': code,
+            'result': result,
+            'message': message,
+            **(extend or {}),
+        }

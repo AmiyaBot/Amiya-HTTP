@@ -2,7 +2,8 @@ import inspect
 import asyncio
 import uvicorn
 
-from typing import List, Callable, Optional
+from dataclasses import dataclass, field
+from typing import List, Callable, Optional, Coroutine, Any
 
 default_logging_options = {
     'version': 1,
@@ -33,6 +34,20 @@ default_logging_options = {
         'uvicorn.access': {'handlers': ['access'], 'level': 'INFO', 'propagate': False},
     },
 }
+
+
+@dataclass
+class ServerConfig:
+    title: str = 'Amiya HTTP'
+    description: str = '对 FastAPI 进行二次封装的简易 HTTP Web 服务 SDK'
+
+    api_prefix: str = '/api'
+
+    fastapi_options: Optional[dict] = None
+    uvicorn_options: Optional[dict] = None
+    logging_options: dict = field(default_factory=lambda: default_logging_options)
+
+    get_user_password: Optional[Callable[[str], Coroutine[Any, Any, str]]] = None
 
 
 class ServerEventHandler:
