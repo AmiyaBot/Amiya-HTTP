@@ -1,9 +1,11 @@
+import abc
 import inspect
 import asyncio
 import uvicorn
 
 from dataclasses import dataclass, field
-from typing import List, Callable, Optional, Coroutine, Any
+from typing import List, Callable, Optional, Any
+from fastapi import FastAPI
 
 default_logging_options = {
     'version': 1,
@@ -42,12 +44,11 @@ class ServerConfig:
     description: str = '对 FastAPI 进行二次封装的简易 HTTP Web 服务 SDK'
 
     api_prefix: str = '/api'
+    default_tags: List[str] = field(default_factory=lambda: ['Default'])
 
     fastapi_options: Optional[dict] = None
     uvicorn_options: Optional[dict] = None
     logging_options: dict = field(default_factory=lambda: default_logging_options)
-
-    get_user_password: Optional[Callable[[str], Coroutine[Any, Any, str]]] = None
 
 
 class ServerEventHandler:
@@ -87,3 +88,18 @@ class ServerMeta(type):
                     asyncio.create_task(action())
                 else:
                     action()
+
+
+class ServerPlugin:
+    @abc.abstractmethod
+    def install(self, app: FastAPI, config: ServerConfig):
+        raise NotImplementedError
+
+
+def response(result: Any = None, code: int = 200, message: str = '', extend: Optional[dict] = None):
+    return {
+        'code': code,
+        'result': result,
+        'message': message,
+        **(extend or {}),
+    }

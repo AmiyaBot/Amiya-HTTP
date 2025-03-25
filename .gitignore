@@ -16,6 +16,6 @@
 *.zip
 
 main*.py
-test*.json
+test*.*
 
 key.txt

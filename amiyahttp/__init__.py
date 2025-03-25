@@ -1,5 +1,4 @@
-from fastapi import FastAPI, Request
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +9,6 @@ from starlette.staticfiles import StaticFiles
 
 from amiyahttp.utils import snake_case_to_pascal_case, create_dir
 from amiyahttp.serverBase import *
-from amiyahttp.oauth2 import *
 
 
 class HttpServer(ServerABCClass, metaclass=ServerMeta):
@@ -28,30 +26,6 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
         self.controller = cbv(self.router)
 
         self.__routes = []
-
-        @app.post(f'{config.api_prefix}/token')
-        async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-            if not self.config.get_user_password:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Cannot get user password')
-
-            user_password = await self.config.get_user_password(form_data.username)
-            if not user_password:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f'Cannot get user password by username: {form_data.username}',
-                )
-
-            if not authenticate_user(form_data.password, user_password):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Incorrect username or password')
-
-            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token = create_access_token(data={'sub': form_data.username}, expires_delta=access_token_expires)
-            return self.response(
-                extend={
-                    'access_token': access_token,
-                    'token_type': 'bearer',
-                }
-            )
 
         @app.on_event('shutdown')
         async def on_shutdown():
@@ -91,7 +65,11 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
                 if len(path) > 1:
                     router_path += f'/{snake_case_to_pascal_case(path[1])}'
 
-            arguments = {'path': router_path, 'tags': [c_name.title()] if len(path) > 1 else ['None'], **kwargs}
+            arguments = {
+                'path': router_path,
+                'tags': [c_name.title()] if len(path) > 1 else self.config.default_tags,
+                **kwargs,
+            }
 
             router_builder = getattr(self.router, method)
             router = router_builder(**arguments)
@@ -101,6 +79,9 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
             return router(fn)
 
         return decorator
+
+    def use_plugin(self, plugin: ServerPlugin):
+        plugin.install(app=self.app, config=self.config)
 
     def add_static_folder(self, path: str, directory: str, **kwargs):
         create_dir(directory)
@@ -137,15 +118,5 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
         await super().serve()
 
     @staticmethod
-    def response(
-        result: Any = None,
-        code: int = 200,
-        message: str = '',
-        extend: Optional[dict] = None,
-    ):
-        return {
-            'code': code,
-            'result': result,
-            'message': message,
-            **(extend or {}),
-        }
+    def response(result: Any = None, code: int = 200, message: str = '', extend: Optional[dict] = None):
+        return response(result, code, message, extend)

@@ -1,5 +1,7 @@
 import re
 import os
+import random
+import string
 
 
 def create_dir(path: str, is_file: bool = False):
@@ -20,3 +22,9 @@ def pascal_case_to_snake_case(camel_case: str):
 def snake_case_to_pascal_case(snake_case: str):
     words = snake_case.split('_')
     return ''.join(word.title() if i > 0 else word.lower() for i, word in enumerate(words))
+
+
+def generate_random_string(length: int = 16):
+    characters = string.ascii_letters + string.digits
+    random_string = ''.join(random.choice(characters) for _ in range(length))
+    return random_string
