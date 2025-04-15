@@ -4,7 +4,7 @@
 
 对 [FastAPI](https://fastapi.tiangolo.com/) 进行二次封装的简易 HTTP Web 服务 SDK
 
-文档地址：[点击查看](https://www.amiyabot.com/develop/advanced/httpSupport.html)
+文档地址：[点击查看](https://www.amiyabot.com/develop/tools/httpSupport.html)
 
 ```python
 import asyncio

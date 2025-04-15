@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from amiyahttp.utils import generate_random_string
+from amiyautils import random_code
 from amiyahttp.serverBase import ServerPlugin, ServerConfig, response
 
 
@@ -17,7 +17,7 @@ class OAuth2(ServerPlugin):
         token_url: str = 'token',
         algorithm: str = 'HS256',
     ):
-        self.secret_key = secret_key or generate_random_string()
+        self.secret_key = secret_key or random_code(16)
         self.access_token_expire_minutes = access_token_expire_minutes
         self.token_url = token_url
         self.algorithm = algorithm

@@ -7,7 +7,7 @@ from fastapi_utils.cbv import cbv
 from fastapi_utils.inferring_router import InferringRouter
 from starlette.staticfiles import StaticFiles
 
-from amiyahttp.utils import snake_case_to_pascal_case, create_dir
+from amiyautils import snake_case_to_pascal_case, create_dir
 from amiyahttp.serverBase import *
 
 
@@ -21,6 +21,17 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
         self.host = host
         self.port = port
         self.config = config
+
+        self.server = uvicorn.Server(
+            config=uvicorn.Config(
+                self.app,
+                host=self.host,
+                port=self.port,
+                loop='asyncio',
+                log_config=self.config.logging_options,
+                **(self.config.uvicorn_options or {}),
+            )
+        )
 
         self.router = InferringRouter()
         self.controller = cbv(self.router)
@@ -103,17 +114,6 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
             allow_credentials=True,
         )
         self.app.include_router(self.router)
-
-        self.server = uvicorn.Server(
-            config=uvicorn.Config(
-                self.app,
-                host=self.host,
-                port=self.port,
-                loop='asyncio',
-                log_config=self.config.logging_options,
-                **(self.config.uvicorn_options or {}),
-            )
-        )
 
         await super().serve()
 

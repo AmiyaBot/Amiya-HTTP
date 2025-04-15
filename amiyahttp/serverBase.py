@@ -6,6 +6,7 @@ import uvicorn
 from dataclasses import dataclass, field
 from typing import List, Callable, Optional, Any
 from fastapi import FastAPI
+from amiyalog import LoggerManager
 
 default_logging_options = {
     'version': 1,
@@ -17,17 +18,20 @@ default_logging_options = {
         },
         'default': {
             '()': 'uvicorn.logging.DefaultFormatter',
-            'fmt': '%(asctime)s ｜ %(levelname)s ｜ %(message)s',
+            'fmt': '%(message)s',
+            'use_colors': None,
         },
     },
     'handlers': {
         'access': {
             'class': 'logging.StreamHandler',
             'formatter': 'access',
+            'stream': 'ext://amiyahttp.serverBase.ServerLog',
         },
         'default': {
             'class': 'logging.StreamHandler',
             'formatter': 'default',
+            'stream': 'ext://amiyahttp.serverBase.ServerLog',
         },
     },
     'loggers': {
@@ -36,6 +40,14 @@ default_logging_options = {
         'uvicorn.access': {'handlers': ['access'], 'level': 'INFO', 'propagate': False},
     },
 }
+
+
+class ServerLog:
+    logger = LoggerManager('Server', save_filename='server')
+
+    @classmethod
+    def write(cls, text: str):
+        cls.logger.info(text)
 
 
 @dataclass

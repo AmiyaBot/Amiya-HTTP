@@ -11,7 +11,7 @@ with open('requirements.txt', mode='w', encoding='utf-8') as req:
 
 setuptools.setup(
     name='amiyahttp',
-    version='0.0.2',
+    version='0.0.4',
     author='vivien8261',
     author_email='826197021@qq.com',
     url='https://www.amiyabot.com/develop/advanced/httpSupport.html',
@@ -26,3 +26,4 @@ setuptools.setup(
 )
 
 # python setup.py bdist_wheel
+# twine upload dist/*
