@@ -9,6 +9,7 @@ from starlette.staticfiles import StaticFiles
 
 from amiyautils import snake_case_to_pascal_case, create_dir
 from amiyahttp.serverBase import *
+from amiyahttp.auth import *
 
 
 class HttpServer(ServerABCClass, metaclass=ServerMeta):
