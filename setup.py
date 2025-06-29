@@ -11,7 +11,7 @@ with open('requirements.txt', mode='w', encoding='utf-8') as req:
 
 setuptools.setup(
     name='amiyahttp',
-    version='0.0.5',
+    version='0.1.0',
     author='vivien8261',
     author_email='826197021@qq.com',
     url='https://www.amiyabot.com/develop/advanced/httpSupport.html',
@@ -21,7 +21,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     packages=setuptools.find_packages(include=['amiyahttp', 'amiyahttp.*']),
     include_package_data=True,
-    python_requires='>=3.8',
+    python_requires='>=3.10',
     install_requires=requirements,
 )
 

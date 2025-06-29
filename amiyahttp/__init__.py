@@ -119,5 +119,5 @@ class HttpServer(ServerABCClass, metaclass=ServerMeta):
         await super().serve()
 
     @staticmethod
-    def response(result: Any = None, code: int = 200, message: str = '', extend: Optional[dict] = None):
-        return response(result, code, message, extend)
+    def response(data: Any = None, code: int = 200, message: str = '', extend: Optional[dict] = None):
+        return response(data, code, message, extend)

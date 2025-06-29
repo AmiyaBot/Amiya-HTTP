@@ -25,3 +25,7 @@ class AuthKey(ServerPlugin):
                 return Response('Invalid authKey', status_code=401)
 
             return await call_next(request)
+        
+    def add_allow_path(self, path: str):
+        if path not in self.allow_path:
+            self.allow_path.append(path)
