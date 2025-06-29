@@ -1,11 +1,6 @@
-amiyalog~=0.0.1
-amiyautils~=0.0.1
-bcrypt==4.0.1
-fastapi-utils~=0.2.1
-fastapi~=0.79.0
-passlib~=1.7.4
-pydantic~=1.10.21
-python-jose~=3.4.0
-python-multipart~=0.0.20
-starlette~=0.19.1
-uvicorn~=0.18.2
+amiyalog~=0.1.0
+amiyautils~=0.1.0
+fastapi~=0.115.14
+fastapi-utils~=0.8.0
+typing_inspect~=0.9.0
+uvicorn[standard]
