@@ -108,10 +108,10 @@ class ServerPlugin:
         raise NotImplementedError
 
 
-def response(result: Any = None, code: int = 200, message: str = '', extend: Optional[dict] = None):
+def response(data: Any = None, code: int = 200, message: str = '', extend: Optional[dict] = None):
     return {
         'code': code,
-        'result': result,
+        'data': data,
         'message': message,
         **(extend or {}),
     }

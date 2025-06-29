@@ -21,7 +21,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     packages=setuptools.find_packages(include=['amiyahttp', 'amiyahttp.*']),
     include_package_data=True,
-    python_requires='>=3.13',
+    python_requires='>=3.10',
     install_requires=requirements,
 )
 
