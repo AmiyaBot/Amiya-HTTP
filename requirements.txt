@@ -1,5 +1,5 @@
-amiyalog~=0.1.0
-amiyautils~=0.1.0
+amiyalog~=0.0.2
+amiyautils~=0.0.2
 fastapi~=0.115.14
 fastapi-utils~=0.8.0
 typing_inspect~=0.9.0
