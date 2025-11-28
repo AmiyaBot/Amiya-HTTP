@@ -1,3 +1,4 @@
+import sys
 import abc
 import inspect
 import asyncio
@@ -15,11 +16,12 @@ default_logging_options = {
         'access': {
             '()': 'uvicorn.logging.AccessFormatter',
             'fmt': '%(client_addr)s - %(request_line)s %(status_code)s',
+            'use_colors': False if not sys.stdout else None,
         },
         'default': {
             '()': 'uvicorn.logging.DefaultFormatter',
             'fmt': '%(message)s',
-            'use_colors': None,
+            'use_colors': False if not sys.stdout else None,
         },
     },
     'handlers': {
